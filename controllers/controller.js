@@ -7,7 +7,7 @@ const config = require("../config");
 module.exports.stay = async (req, res) => {
   res.send("auth auth");
 };
-
+// register user
 module.exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -34,6 +34,7 @@ module.exports.register = async (req, res) => {
   }
 };
 
+// user login
 module.exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -65,5 +66,19 @@ module.exports.login = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: error.message }); //Internal Server Error
+  }
+};
+
+// only for auth user
+module.exports.loggedin = async (req, res) => {
+  try {
+    const user = await User.findOne({ _id: req.user.id });
+    return res.status(200).json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
