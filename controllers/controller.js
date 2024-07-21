@@ -5,8 +5,13 @@ const {
 } = require("../models/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { authenticator } = require("otplib");
+const qrcode = require("qrcode");
+const crypto = require("crypto");
+const NodeCache = require("node-cache");
 
 const config = require("../config");
+const cache = new NodeCache();
 
 module.exports.stay = async (req, res) => {
   res.send("auth auth");
@@ -31,6 +36,8 @@ module.exports.register = async (req, res) => {
       email,
       password: hashedPassword,
       role: role ?? "member",
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
     });
 
     return res
@@ -59,34 +66,79 @@ module.exports.login = async (req, res) => {
       return res.status(401).json({ message: "invalid email, password" });
     }
 
-    // Generate access token
-    const accessToken = jwt.sign(
-      { userId: user._id },
-      config.accessTokenSecret,
-      { subject: "accessApi", expiresIn: config.accessTokenExpires }
-    );
+    // if user has 2FA enabled
+    if (user.twoFactorEnabled) {
+      const tempToken = crypto.randomUUID();
 
-    // Generate refresh token
-    const refreshToken = jwt.sign(
-      { userId: user._id },
-      config.refreshTokenSecret,
-      { subject: "refreshToken", expiresIn: config.refreshTokenExpiresIn }
-    );
+      cache.set(
+        config.cacheTemporaryTokenPrefix + tempToken,
+        user._id,
+        config.cacheTemporaryExpiresInSeconds
+      );
 
-    // Store refresh token in database
-    await UserRefreshTokens.insert({
-      refreshToken: refreshToken,
-      userId: user._id,
-    });
+      return res.status(200).json({
+        tempToken,
+        expiresInSeconds: config.cacheTemporaryExpiresInSeconds,
+      });
+    } else {
+      // Generate access token
+      const accessToken = jwt.sign(
+        { userId: user._id },
+        config.accessTokenSecret,
+        { subject: "accessApi", expiresIn: config.accessTokenExpires }
+      );
 
-    // Return user info and tokens
-    return res.status(200).json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-    });
+      // Generate refresh token
+      const refreshToken = jwt.sign(
+        { userId: user._id },
+        config.refreshTokenSecret,
+        { subject: "refreshToken", expiresIn: config.refreshTokenExpiresIn }
+      );
+
+      // Store refresh token in database
+      await UserRefreshTokens.insert({
+        refreshToken: refreshToken,
+        userId: user._id,
+      });
+
+      // Return user info and tokens
+      return res.status(200).json({
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      });
+    }
+
+    // // Generate access token
+    // const accessToken = jwt.sign(
+    //   { userId: user._id },
+    //   config.accessTokenSecret,
+    //   { subject: "accessApi", expiresIn: config.accessTokenExpires }
+    // );
+
+    // // Generate refresh token
+    // const refreshToken = jwt.sign(
+    //   { userId: user._id },
+    //   config.refreshTokenSecret,
+    //   { subject: "refreshToken", expiresIn: config.refreshTokenExpiresIn }
+    // );
+
+    // // Store refresh token in database
+    // await UserRefreshTokens.insert({
+    //   refreshToken: refreshToken,
+    //   userId: user._id,
+    // });
+
+    // // Return user info and tokens
+    // return res.status(200).json({
+    //   id: user._id,
+    //   name: user.name,
+    //   email: user.email,
+    //   accessToken: accessToken,
+    //   refreshToken: refreshToken,
+    // });
   } catch (error) {
     return res.status(500).json({ message: error.message }); //Internal Server Error
   }
@@ -206,4 +258,138 @@ module.exports.moderators = async (req, res) => {
   return res.status(200).json({
     message: "only admins and moderators can access this route. welcome",
   });
+};
+
+// // 2 FA
+// module.exports.twoFactor = async (req, res) => {
+//   try {
+//     const user = await User.findOne({ _id: req.user.id });
+
+//     const secret = authenticator.generateSecret();
+//     const uri = authenticator.keyuri(user.email, "company_name", secret);
+
+//     await User.update({ _id: req.user.id }, { $set: { "2faSecret": secret } });
+//     await User.compactDatafile();
+
+//     const qrCode = await qrcode.toBuffer(uri, { type: "image/png", margin: 1 });
+//     res.setHeader("Content-Disposition", "attachment: filename=qrcode.png");
+//     return res.status(200).type("image/png").send(qrCode);
+//   } catch (error) {
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
+
+// set up 2fa
+module.exports.setupTwoFactor = async (req, res) => {
+  try {
+    const user = await User.findOne({ _id: req.user.id });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const secret = authenticator.generateSecret();
+    const uri = authenticator.keyuri(user.email, "YourCompanyName", secret);
+
+    // Store the secret temporarily
+    await User.update(
+      { _id: req.user.id },
+      { $set: { tempTwoFactorSecret: secret } }
+    );
+    await User.compactDatafile();
+
+    const qrCode = await qrcode.toBuffer(uri, { type: "image/png", margin: 1 });
+    res.setHeader("Content-Disposition", "attachment; filename=qrcode.png");
+    return res.status(200).type("image/png").send(qrCode);
+  } catch (error) {
+    console.error("Error in setupTwoFactor:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// enable 2fa
+module.exports.enableTwoFactor = async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user = await User.findOne({ _id: req.user.id });
+
+    if (!user || !user.tempTwoFactorSecret) {
+      return res.status(400).json({ message: "2FA setup not initiated" });
+    }
+
+    const isValid = authenticator.verify({
+      token,
+      secret: user.tempTwoFactorSecret,
+    });
+
+    if (isValid) {
+      await User.update(
+        { _id: req.user.id },
+        {
+          $set: { twoFactorSecret: user.tempTwoFactorSecret },
+          $unset: { tempTwoFactorSecret: "" },
+        }
+      );
+      await User.compactDatafile();
+      return res.status(200).json({ message: "2FA enabled successfully" });
+    } else {
+      return res.status(400).json({ message: "Invalid token" });
+    }
+  } catch (error) {
+    console.error("Error in enableTwoFactor:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+module.exports.login2fa = async (req, res) => {
+  try {
+    const { tempToken, token } = req.body;
+
+    if (!tempToken || !token) {
+      return res
+        .status(422)
+        .json({ message: "please fill in all fields (tempptoken and token)" });
+    }
+
+    const userId = cache.get(config.cacheTemporaryTokenPrefix + tempToken);
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "The prpovided temporary token is incorrect or expired",
+      });
+    }
+    const user = await User.findOne({ _id: userId });
+    const verified = authenticator.check(token, user.twoFactorSecret);
+
+    if (!verified) {
+      return res
+        .status(401)
+        .json({ message: "the provided token is incorrect or expired" });
+    }
+    const accessToken = jwt.sign(
+      { userId: user._id },
+      config.accessTokenSecret,
+      { subject: "accessApi", expiresIn: config.accessTokenExpiresIn }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      config.refreshTokenSecret,
+      { subject: "refreshToken", expiresIn: config.refreshTokenExpiresIn }
+    );
+
+    await UserRefreshTokens.insert({
+      refreshToken,
+      userId: user._id,
+    });
+
+    return res.status(200).json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      accessToken,
+      refreshToken,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };

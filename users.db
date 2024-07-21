@@ -1,3 +1,3 @@
-{"name":"Daniel","email":"daniel@email.com","password":"$2a$10$2OJrX/l0oHOZh/Z7QvA6xeaPWNGb4mk6TMHhdrQ7JccIcRM7ly6vK","role":"moderator","_id":"DP6tG99xtft7LmFz"}
-{"name":"Jane","email":"jane@email.com","password":"$2a$10$M72GrEC4PfxlWPXadgHqwu/PESwUIzfZDyTFdzC8vlfKKMRdwPFna","role":"member","_id":"J9ArjtDATqUplH1S"}
-{"name":"David","email":"david@email.com","password":"$2a$10$GCdpTkMc0nWei/E1bGqrCO1L/RZIg1EneoDHVlAkqhfNNnQgGOsQW","role":"admin","_id":"WjgJlwuqvweyiRfe"}
+{"name":"Jane","email":"jane@email.com","password":"$2a$10$RLvY1OkOVPRoJRHzOOak5uAxI0i78SreiHNnQ6owjPmX4YI0IOZZu","role":"member","twoFactorEnabled":false,"twoFactorSecret":"OMBRSSJ6HVPTSOJU","_id":"8ZNYhhbR0LlNqzUU"}
+{"name":"Dan","email":"dan@email.com","password":"$2a$10$2zGQLQGnlES1hS9Kyh.vWOIyUTJP3O3khK4AjUe5241ReEoyJLbby","role":"member","twoFactorEnabled":false,"twoFactorSecret":null,"_id":"ET9MoBDvUuTGglPH"}
+{"name":"Dav","email":"dav@email.com","password":"$2a$10$TelJAP0CPWgBuI66mmXm8OfPTKpWVvPhoTXfFCP.KxNcMmuh/KyRe","role":"member","twoFactorEnabled":false,"twoFactorSecret":"OVNEC43WJUIE62RK","_id":"jS2U8gxAvYUrgoOM"}

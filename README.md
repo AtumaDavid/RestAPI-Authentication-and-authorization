@@ -9,6 +9,12 @@
 - bcryptjs
 - dotenv
 
+## technologies for 2FA(for Authenticator app)
+
+- qrcode
+- otplib
+- node-cache
+
 ## About
 
 This project implements a robust authentication and authorization system using Node.js and Express. It features user registration, login functionality, role-based access control, and token-based authentication using JSON Web Tokens (JWT). The system utilizes both access tokens and refresh tokens for enhanced security.

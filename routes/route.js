@@ -8,6 +8,10 @@ const {
   moderators,
   refreshtoken,
   logout,
+  twoFactor,
+  setupTwoFactor,
+  enableTwoFactor,
+  login2fa,
 } = require("../controllers/controller");
 const ensureAuthenticated = require("../middleware/ensureAuthenticated");
 const authorize = require("../middleware/authorize");
@@ -30,6 +34,11 @@ router.get(
   authorize(["admin", "moderator"]),
   moderators
 );
+
+// router.get("api/auth/2fa/generate", ensureAuthenticated, twoFactor);
+router.get("/api/auth/2fa/setup", ensureAuthenticated, setupTwoFactor);
+router.post("/api/auth/2fa/enable", ensureAuthenticated, enableTwoFactor);
+router.post("/api/auth/login/2fa", login2fa);
 
 router.get("/api/auth/logout", ensureAuthenticated, logout);
 
