@@ -347,28 +347,38 @@ module.exports.login2fa = async (req, res) => {
     if (!tempToken || !token) {
       return res
         .status(422)
-        .json({ message: "please fill in all fields (tempptoken and token)" });
+        .json({ message: "Please fill in all fields (tempToken and token)" });
     }
 
     const userId = cache.get(config.cacheTemporaryTokenPrefix + tempToken);
 
     if (!userId) {
       return res.status(401).json({
-        message: "The prpovided temporary token is incorrect or expired",
+        message: "The provided temporary token is incorrect or expired",
       });
     }
+
     const user = await User.findOne({ _id: userId });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     const verified = authenticator.check(token, user.twoFactorSecret);
 
     if (!verified) {
       return res
         .status(401)
-        .json({ message: "the provided token is incorrect or expired" });
+        .json({ message: "The provided token is incorrect or expired" });
     }
+
+    // Remove temporary token from cache
+    cache.del(config.cacheTemporaryTokenPrefix + tempToken);
+
     const accessToken = jwt.sign(
       { userId: user._id },
       config.accessTokenSecret,
-      { subject: "accessApi", expiresIn: config.accessTokenExpiresIn }
+      { subject: "accessApi", expiresIn: config.accessTokenExpires }
     );
 
     const refreshToken = jwt.sign(
@@ -390,6 +400,7 @@ module.exports.login2fa = async (req, res) => {
       refreshToken,
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    console.error("Error in login2fa:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
