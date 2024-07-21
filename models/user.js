@@ -5,4 +5,9 @@ const User = Datastore.create({
   autoload: true,
 });
 
-module.exports = User;
+const UserRefreshTokens = Datastore.create("userrefreshtoken.db");
+
+module.exports = {
+  User,
+  UserRefreshTokens,
+};

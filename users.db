@@ -1,1 +1,3 @@
-{"name":"David","email":"david@email.com","password":"$2a$10$TwztC3.yU7exc8S3//1vAuWEuJQ0/j34Cb8i16vCL5371fp4HtdUm","_id":"FqQsGOvJCefNNnkU"}
+{"name":"Daniel","email":"daniel@email.com","password":"$2a$10$2OJrX/l0oHOZh/Z7QvA6xeaPWNGb4mk6TMHhdrQ7JccIcRM7ly6vK","role":"moderator","_id":"DP6tG99xtft7LmFz"}
+{"name":"Jane","email":"jane@email.com","password":"$2a$10$M72GrEC4PfxlWPXadgHqwu/PESwUIzfZDyTFdzC8vlfKKMRdwPFna","role":"member","_id":"J9ArjtDATqUplH1S"}
+{"name":"David","email":"david@email.com","password":"$2a$10$GCdpTkMc0nWei/E1bGqrCO1L/RZIg1EneoDHVlAkqhfNNnQgGOsQW","role":"admin","_id":"WjgJlwuqvweyiRfe"}

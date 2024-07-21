@@ -13,7 +13,18 @@ const ensureAuthenticated = (req, res, next) => {
     req.user = { id: decoded.userId };
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Token is not valid" });
+    if (err instanceof jwt.TokenExpiredError) {
+      return res
+        .status(401)
+        .json({ message: "access token expired", code: "accesTokenExpired" });
+    } else if (err instanceof jwt.JsonWebTokenError) {
+      return res
+        .status(401)
+        .json({ message: "access token invalid", code: "AccessTokenInvalid" });
+    } else {
+      return res.status(401).json({ message: "Token is invalid" });
+    }
+    // return res.status(401).json({ message: "Token is not valid" });
   }
 };
 
